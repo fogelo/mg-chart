@@ -35,7 +35,6 @@ interface Props {
 }
 
 const ColoredLineChart: React.FC<Props> = ({ data, threshold = 1 }) => {
-
   const [zUvScores, zPvScores] = useMemo(() => {
     const uvs = data.map((d) => d.uv);
     const pvs = data.map((d) => d.pv);
@@ -51,7 +50,6 @@ const ColoredLineChart: React.FC<Props> = ({ data, threshold = 1 }) => {
     return [zUv, zPv] as const;
   }, [data]);
 
-
   const uvIntervals = useMemo(
     () => getAnomalyIntervals(zUvScores, threshold),
     [zUvScores, threshold]
@@ -60,6 +58,10 @@ const ColoredLineChart: React.FC<Props> = ({ data, threshold = 1 }) => {
     () => getAnomalyIntervals(zPvScores, threshold),
     [zPvScores, threshold]
   );
+
+  // утилита для проверки, попадает ли индекс точки в один из интервалов
+  const isInIntervals = (intervals: [number, number][], idx: number) =>
+    intervals.some(([s, e]) => idx >= s && idx <= e);
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -83,7 +85,20 @@ const ColoredLineChart: React.FC<Props> = ({ data, threshold = 1 }) => {
           type="linear"
           dataKey="pv"
           stroke="#8884d8"
-          activeDot={{ r: 8 }}
+          // Рисуем dot вручную
+          dot={(dotProps) => {
+            const { cx, cy, index } = dotProps;
+            const isAnom = isInIntervals(pvIntervals, index);
+            return (
+              <circle
+                cx={cx}
+                cy={cy}
+                r={isAnom ? 6 : 3}
+                fill={isAnom ? "red" : "#8884d8"}
+                fillOpacity={0.5}
+              />
+            );
+          }}
         />
 
         {/* Закрашиваем фон для каждого «аномального» интервала */}
@@ -120,7 +135,24 @@ const ColoredLineChart: React.FC<Props> = ({ data, threshold = 1 }) => {
           />
         ))}
 
-        <Line type="monotone" dataKey="uv" stroke="#82ca9d" />
+        <Line
+          type="monotone"
+          dataKey="uv"
+          stroke="#82ca9d"
+          dot={(dotProps) => {
+            const { cx, cy, index } = dotProps;
+            const isAnom = isInIntervals(uvIntervals, index);
+            return (
+              <circle
+                cx={cx}
+                cy={cy}
+                r={isAnom ? 6 : 3}
+                fill={isAnom ? "red" : "#82ca9d"}
+                fillOpacity={0.5}
+              />
+            );
+          }}
+        />
       </LineChart>
     </ResponsiveContainer>
   );
